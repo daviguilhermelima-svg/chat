@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com Firebase Firestore</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        #messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            padding: 8px 12px;
+            border-radius: 15px;
+            background-color: #e0f7fa;
+            width: fit-content;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="chat-container">
+        <h2 style="margin-top: 0;">Chat Global</h2>
+        <div id="messages"></div>
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button id="sendBtn">Enviar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // 1. IMPORTS DOS MÓDULOS DO FIREBASE
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // Configuração do seu Firebase
+    const firebaseConfig = {
+  apiKey: "AIzaSyDqarwEAQmpQ1vuPJeZeKR2guBRAubnao0",
+  authDomain: "chat-ee8cf.firebaseapp.com",
+  projectId: "chat-ee8cf",
+  storageBucket: "chat-ee8cf.firebasestorage.app",
+  messagingSenderId: "445848159459",
+  appId: "1:445848159459:web:46769a88c19b9467acf1d6",
+  measurementId: "G-FTHSLKKZG1"
+};
+
+        // 2. INICIALIZAÇÃO DO APP E FIRESTORE
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Referência da coleção "mensagens"
+        const mensagensRef = collection(db, "mensagens");
+
+        // Elementos da Interface (DOM)
+        const messagesDiv = document.getElementById("messages");
+        const messageInput = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        // 3. LER MENSAGENS EM TEMPO REAL (Ordenado por criação)
+        const q = query(mensagensRef, orderBy("createdAt", "asc"));
+
+        onSnapshot(q, (snapshot) => {
+            messagesDiv.innerHTML = ""; // Limpa a tela para atualizar a lista
+            
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                
+                // Só exibe se a mensagem contiver texto
+                if (data.texto) {
+                    const div = document.createElement("div");
+                    div.className = "message";
+                    div.textContent = data.texto;
+                    messagesDiv.appendChild(div);
+                }
+            });
+            
+            // Rola o chat para a última mensagem automaticamente
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }, (error) => {
+            console.error("Erro ao escutar mensagens: ", error);
+        });
+
+        // 4. FUNÇÃO PARA ENVIAR MENSAGEM
+        async function sendMessage() {
+            const texto = messageInput.value.trim();
+            
+            if (texto !== "") {
+                // Desativa o input e botão temporariamente para evitar cliques duplos
+                messageInput.value = ""; 
+                
+                try {
+                    await addDoc(mensagensRef, {
+                        texto: texto,
+                        createdAt: serverTimestamp() // Carimbo de data/hora oficial do servidor
+                    });
+                } catch (e) {
+                    console.error("Erro ao adicionar mensagem: ", e);
+                    alert("Erro ao enviar mensagem. Verifique o console ou as Regras do Firebase.");
+                }
+            }
+        }
+
+        // 5. EVENTOS (Cliques e Tecla Enter)
+        sendBtn.addEventListener("click", sendMessage);
+        messageInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+
+</html>
